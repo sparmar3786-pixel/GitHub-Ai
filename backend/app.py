@@ -30,7 +30,7 @@ def analyze(req: AnalyzeRequest):
     parts = command_parts()
     if not parts or shutil.which(parts[0]) is None:
         return AnalyzeResponse(status="UNAVAILABLE", ticker=req.ticker.upper(), generated_at=now(), summary="TradingAgents CLI is not installed on this backend. No signal generated.")
-    template = os.getenv("TRADINGAGENTS_ANALYZE_TEMPLATE")
+    template = os.getenv("TRADINGAGENTS_ANALYZE_TEMPLATE", "tradingagents --ticker {ticker} --date {date}")
     if not template:
         return AnalyzeResponse(status="UNAVAILABLE", ticker=req.ticker.upper(), generated_at=now(), summary="TRADINGAGENTS_ANALYZE_TEMPLATE is not configured. No signal generated.")
     cmd = template.format(ticker=req.ticker.upper(), date=req.date or "")
