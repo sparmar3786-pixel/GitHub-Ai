@@ -8,8 +8,9 @@ import 'api.dart';
 import 'config.dart';
 import 'broker_home_prototype_page.dart';
 import 'strategy_library_page.dart';
+import 'tradingagents_research_page.dart';
 
-const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Risk','Backtesting','API','Data Health','Broker Home','Signal Calendar'];
+const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Risk','Backtesting','API','Data Health','Broker Home','Signal Calendar','AI Research'];
 const indexes = ['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','BANKEX'];
 
 void main() {
@@ -529,6 +530,7 @@ class _FreshHomeState extends State<FreshHome> with WidgetsBindingObserver {
           onIndexSelected: (value) => setState(() => selectedIndex = value),
         ),
         const SignalCalendarPage(),
+        const TradingAgentsResearchPage(),
       ]),
     ),
   );
@@ -545,9 +547,8 @@ IconData _tabIcon(int index) => switch (index) {
   7 => Icons.science_outlined,
   8 => Icons.settings_ethernet,
   9 => Icons.monitor_heart_outlined,
-  10 => Icons.account_balance_wallet_outlined,
-  11 => Icons.library_books_outlined,
-  12 => Icons.layers_outlined,
+  10 => Icons.calendar_month_outlined,
+  11 => Icons.psychology_alt_outlined,
   _ => Icons.layers_outlined,
 };
 
