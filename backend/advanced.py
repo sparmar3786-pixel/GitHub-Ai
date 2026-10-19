@@ -135,6 +135,16 @@ def get_config():
         "point_in_time_policy": "Historical correctness depends on the installed framework and timestamped source data; verify reports and provider coverage.",
     }
 
+@router.get("/memory")
+def read_memory():
+    path = Path(os.getenv("TRADINGAGENTS_MEMORY_LOG_PATH", str(DATA_DIR / "memory" / "trading_memory.md")))
+    try:
+        if path.is_symlink() or not path.is_file():
+            return {"available": False, "path": str(path), "content": ""}
+        return {"available": True, "path": str(path), "content": path.read_text(encoding="utf-8")[-20000:]}
+    except OSError:
+        raise HTTPException(status_code=500, detail="Could not read configured decision-memory log.") from None
+
 @router.get("/reports")
 def list_reports():
     items = {}
