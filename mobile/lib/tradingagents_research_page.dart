@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+const _defaultTradingAgentsBackendUrl = 'https://tradingagents-backend-i0a1.onrender.com';
+
 const _researchModules = <String, String>{
   'Overview': 'Run the complete multi-agent research workflow from one place. Results come from the configured TradingAgents backend.',
   'Analyst Team': 'Technical, fundamentals, news and sentiment analysts gather evidence. Availability depends on the selected analysts and configured data vendors.',
@@ -26,7 +28,10 @@ class TradingAgentsResearchPage extends StatefulWidget {
 
 class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
   final _url = TextEditingController(
-    text: const String.fromEnvironment('TRADINGAGENTS_BACKEND_URL', defaultValue: ''),
+    text: const String.fromEnvironment(
+      'TRADINGAGENTS_BACKEND_URL',
+      defaultValue: _defaultTradingAgentsBackendUrl,
+    ),
   );
   final _ticker = TextEditingController(text: 'RELIANCE.NS');
   final _date = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
@@ -52,8 +57,13 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('tradingagents_backend_url');
-      if (saved != null && saved.trim().isNotEmpty && mounted) {
-        setState(() => _url.text = saved);
+      if (!mounted) return;
+      // Do not let an old malformed value in SharedPreferences override the
+      // known deployed HTTPS base URL. Accept only a root URL, not /health or /v1.
+      if (saved != null && _isValidBaseUrl(saved)) {
+        setState(() => _url.text = saved.trim());
+      } else {
+        setState(() => _url.text = _defaultTradingAgentsBackendUrl);
       }
     } catch (_) {
       // The page remains usable with the configured or manually entered URL
@@ -71,20 +81,28 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
     super.dispose();
   }
 
+  bool _isValidBaseUrl(String value) {
+    final raw = value.trim().replaceAll(RegExp(r'/+$'), '');
+    final uri = Uri.tryParse(raw);
+    return uri != null &&
+        uri.scheme == 'https' &&
+        uri.host.isNotEmpty &&
+        uri.userInfo.isEmpty &&
+        !uri.hasQuery &&
+        !uri.hasFragment &&
+        (uri.path.isEmpty || uri.path == '/') &&
+        uri.host != 'localhost' &&
+        uri.host != '127.0.0.1' &&
+        uri.host != '::1';
+  }
+
   Uri _endpoint(String path) {
     final raw = _url.text.trim().replaceAll(RegExp(r'/+$'), '');
     final base = Uri.tryParse(raw);
-    if (base == null ||
-        base.scheme != 'https' ||
-        base.host.isEmpty ||
-        base.userInfo.isNotEmpty ||
-        base.hasQuery ||
-        base.hasFragment ||
-        base.host == 'localhost' ||
-        base.host == '127.0.0.1') {
-      throw const FormatException('TradingAgents backend URL is missing or invalid. Enter the separately deployed public HTTPS base URL (for example https://your-service.up.railway.app), without /health or /v1 paths. The saved URL is shared across all research tabs.');
+    if (base == null || !_isValidBaseUrl(raw)) {
+      throw const FormatException('TradingAgents backend URL is missing or invalid. Use the public HTTPS base URL https://tradingagents-backend-i0a1.onrender.com without /health or /v1. The URL is shared across all research tabs.');
     }
-    return base.replace(path: '${base.path.replaceAll(RegExp(r'/+$'), '')}$path');
+    return base.replace(path: path);
   }
 
   Future<Map<String, dynamic>> _get(String path) async {
