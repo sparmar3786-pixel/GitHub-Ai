@@ -139,14 +139,14 @@ void main() {
     expect(find.text('Backend layer evidence not supplied.'), findsNothing);
   });
 
-  testWidgets('Trading app starts with strategy tab and no AI tabs', (tester) async {
+  testWidgets('Trading app starts without Signal or Strategy pages', (tester) async {
     await tester.pumpWidget(const FreshApp());
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(tabs, contains('Dashboard'));
     expect(tabs, contains('Market'));
-    expect(tabs, contains('Signals'));
-    expect(tabs, contains('Strategies'));
+    expect(tabs, isNot(contains('Signals')));
+    expect(tabs, isNot(contains('Strategies')));
     expect(tabs, contains('API'));
     expect(tabs, isNot(contains('API & Railway')));
     expect(tabs, isNot(contains('AI Access')));
