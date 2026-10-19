@@ -48,10 +48,15 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
   }
 
   Future<void> _restoreUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString('tradingagents_backend_url');
-    if (saved != null && saved.trim().isNotEmpty && mounted) {
-      setState(() => _url.text = saved);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('tradingagents_backend_url');
+      if (saved != null && saved.trim().isNotEmpty && mounted) {
+        setState(() => _url.text = saved);
+      }
+    } catch (_) {
+      // The page remains usable with the configured or manually entered URL
+      // if platform preferences are unavailable (for example in widget tests).
     }
   }
 
