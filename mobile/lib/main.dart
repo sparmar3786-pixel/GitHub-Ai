@@ -9,7 +9,7 @@ import 'config.dart';
 import 'broker_home_prototype_page.dart';
 import 'strategy_library_page.dart';
 
-const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Signals','Risk','Backtesting','API','Data Health','Broker Home','Strategies','Signal Calendar'];
+const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Risk','Backtesting','API','Data Health','Broker Home','Signal Calendar'];
 const indexes = ['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','BANKEX'];
 
 void main() {
@@ -505,7 +505,6 @@ class _FreshHomeState extends State<FreshHome> with WidgetsBindingObserver {
         ChainPage(selected:selectedIndex,onChanged:(v)=>setState(()=>selectedIndex=v), market:_market(selectedIndex)),
         OIPage(signals:signals),
         IndicatorsPage(selected:selectedIndex,signal:_signal(selectedIndex),fast:emaFast,slow:emaSlow,onChanged:(f,s){setState((){emaFast=f;emaSlow=s;});refresh();},onIndex:(v)=>setState(()=>selectedIndex=v)),
-        SignalPage(index:selectedIndex,signals:signals,tradePlans:tradePlans,market:market,onChanged:(v)=>setState(()=>selectedIndex=v)),
         RiskPage(index:selectedIndex,signal:_signal(selectedIndex),plans:tradePlans),
         BacktestingPage(backendUrl: AppConfig.signalBackendUrl),
         ApiPage(backendUrl:backendUrl,feed:feed,storeDiagnostics:storeDiagnostics,market:market,onSaved:(url){setState(()=>backendUrl=url);refresh();}),
@@ -529,7 +528,6 @@ class _FreshHomeState extends State<FreshHome> with WidgetsBindingObserver {
           status: status,
           onIndexSelected: (value) => setState(() => selectedIndex = value),
         ),
-        StrategyLibraryPage(signals: signals, selectedIndex: selectedIndex),
         const SignalCalendarPage(),
       ]),
     ),
