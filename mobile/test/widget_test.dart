@@ -154,6 +154,9 @@ void main() {
     expect(tabs, isNot(contains('Quant Engine Lab')));
     expect(tabs, isNot(contains('Research Engines')));
     expect(tabs, isNot(contains('5-Layer Quant Signal Engine')));
+    expect(tabs, isNot(contains('Quant Engine')));
+    expect(tabs, isNot(contains('Quant Signal')));
+    expect(tabs, isNot(contains('Strategy Signal')));
     expect(find.byKey(const ValueKey('open-navigation-menu')), findsOneWidget);
   });
 
