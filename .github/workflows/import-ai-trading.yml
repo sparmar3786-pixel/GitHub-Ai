@@ -1,0 +1,56 @@
+name: Import AI-TRADING repository snapshot
+
+on:
+  push:
+    branches:
+      - import/ai-trading-snapshot-20261019
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    if: "!startsWith(github.event.head_commit.message, 'Import AI-TRADING snapshot:')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub-Ai target repository
+        uses: actions/checkout@v4
+        with:
+          ref: import/ai-trading-snapshot-20261019
+          fetch-depth: 0
+      - name: Clone source and copy repository into subfolder
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/sparmar3786-pixel/AI-TRADING.git /tmp/AI-TRADING
+          mkdir -p upstream/AI-TRADING
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='!.env.example' \
+            --exclude='**/node_modules/' \
+            --exclude='**/.dart_tool/' \
+            --exclude='**/build/' \
+            --exclude='**/.gradle/' \
+            --exclude='**/coverage/' \
+            --exclude='**/__pycache__/' \
+            --exclude='**/*.pyc' \
+            /tmp/AI-TRADING/ upstream/AI-TRADING/
+          test -f upstream/AI-TRADING/README.md
+          echo "Copied source files: $(find upstream/AI-TRADING -type f | wc -l)"
+          du -sh upstream/AI-TRADING
+      - name: Commit imported snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add upstream/AI-TRADING
+          if git diff --cached --quiet; then
+            echo "No changes to import."
+            exit 0
+          fi
+          git commit -m "Import AI-TRADING snapshot: $(date -u +%F)"
+          git push origin HEAD:import/ai-trading-snapshot-20261019
