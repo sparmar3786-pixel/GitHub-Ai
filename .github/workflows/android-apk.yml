@@ -2,6 +2,8 @@ name: Android APK
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -14,13 +16,25 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform files
+        working-directory: mobile
+        run: flutter create --platforms=android --org com.githubai --project-name tradingagents .
+      - name: Resolve Flutter dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Run Flutter tests
+        working-directory: mobile
+        run: flutter test
       - name: Build debug APK
-        working-directory: android
-        run: gradle --no-daemon assembleDebug
+        working-directory: mobile
+        run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
         with:
-          name: tradingagents-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: ai-trading-ui-debug-apk
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
