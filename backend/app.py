@@ -35,6 +35,11 @@ ALL_PROVIDER_KEYS = tuple(dict.fromkeys(name for names in PROVIDER_KEY_GROUPS.va
 class AnalyzeRequest(BaseModel):
     ticker: str = Field(min_length=1, max_length=20, pattern=r"^[A-Za-z0-9.\-^=]+$")
     date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    analysts: list[Literal["market", "news", "fundamentals", "social"]] = Field(
+        default_factory=lambda: ["market", "news", "fundamentals", "social"],
+        min_length=1,
+        max_length=4,
+    )
 
 
 class AnalyzeResponse(BaseModel):
@@ -216,10 +221,26 @@ def analyze(req: AnalyzeRequest):
 
     template = os.environ["TRADINGAGENTS_ANALYZE_TEMPLATE"]
     analysis_date = req.date or datetime.now().strftime("%Y-%m-%d")
-    cmd = template.format(ticker=req.ticker.upper(), date=analysis_date)
+    analysts = ",".join(req.analysts)
+    try:
+        command = template.format(
+            ticker=req.ticker.upper(),
+            date=analysis_date,
+            analysts=analysts,
+        )
+        cmd = shlex.split(command)
+        # Existing deployments may already pin analysts in the template.
+        # Otherwise honor the selection sent by the app.
+        if "{analysts}" not in template and "--analysts" not in cmd:
+            cmd.extend(["--analysts", analysts])
+    except (KeyError, ValueError):
+        raise HTTPException(
+            status_code=500,
+            detail="Invalid TRADINGAGENTS_ANALYZE_TEMPLATE placeholders.",
+        ) from None
     try:
         result = subprocess.run(
-            shlex.split(cmd),
+            cmd,
             capture_output=True,
             text=True,
             timeout=int(os.getenv("TRADINGAGENTS_TIMEOUT_SECONDS", "240")),
