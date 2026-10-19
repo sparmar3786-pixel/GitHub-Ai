@@ -7,6 +7,8 @@ services:
     dockerContext: ./backend
     healthCheckPath: /health
     envVars:
+      - key: TRADINGAGENTS_CORS_ORIGINS
+        value: "*"
       - key: TRADINGAGENTS_LLM_PROVIDER
         sync: false
       - key: TRADINGAGENTS_QUICK_THINK_LLM
@@ -47,3 +49,9 @@ services:
         sync: false
       - key: MINIMAX_API_KEY
         sync: false
+  - type: web
+    name: tradingagents-frontend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./mobile/Dockerfile.web
+    dockerContext: ./mobile
