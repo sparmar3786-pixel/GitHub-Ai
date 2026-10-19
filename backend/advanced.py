@@ -81,6 +81,13 @@ class ResearchRun(BaseModel):
     checkpoint_enabled: bool = True
     clear_checkpoints: bool = False
     html_report: bool = True
+    quick_model: str | None = Field(default=None, min_length=1, max_length=100, pattern=r"^[A-Za-z0-9._:/-]+$")
+    deep_model: str | None = Field(default=None, min_length=1, max_length=100, pattern=r"^[A-Za-z0-9._:/-]+$")
+    quick_provider: str | None = Field(default=None, min_length=1, max_length=40, pattern=r"^[A-Za-z0-9_-]+$")
+    deep_provider: str | None = Field(default=None, min_length=1, max_length=40, pattern=r"^[A-Za-z0-9_-]+$")
+    output_language: str | None = Field(default=None, min_length=2, max_length=40, pattern=r"^[A-Za-z -]+$")
+    debate_rounds: int | None = Field(default=None, ge=1, le=10)
+    risk_rounds: int | None = Field(default=None, ge=1, le=10)
 
 class GridRun(BaseModel):
     tickers: list[str] = Field(min_length=1, max_length=20)
@@ -114,7 +121,8 @@ def put_portfolio(req: Portfolio):
 @router.get("/config")
 def get_config():
     keys = ("TRADINGAGENTS_LLM_PROVIDER", "TRADINGAGENTS_QUICK_THINK_LLM",
-            "TRADINGAGENTS_DEEP_THINK_LLM", "TRADINGAGENTS_OUTPUT_LANGUAGE",
+            "TRADINGAGENTS_DEEP_THINK_LLM", "TRADINGAGENTS_QUICK_THINK_PROVIDER",
+            "TRADINGAGENTS_DEEP_THINK_PROVIDER", "TRADINGAGENTS_OUTPUT_LANGUAGE",
             "TRADINGAGENTS_MAX_DEBATE_ROUNDS", "TRADINGAGENTS_MAX_RISK_ROUNDS",
             "TRADINGAGENTS_CHECKPOINT_ENABLED")
     return {
@@ -228,10 +236,27 @@ def advanced_run(req: ResearchRun):
         args.append("--no-show")
     if not has_flag("--save", "--no-save"):
         args.append("--save")
+    run_env = os.environ.copy()
+    overrides = {
+        "TRADINGAGENTS_QUICK_THINK_LLM": req.quick_model,
+        "TRADINGAGENTS_DEEP_THINK_LLM": req.deep_model,
+        "TRADINGAGENTS_QUICK_THINK_PROVIDER": req.quick_provider,
+        "TRADINGAGENTS_DEEP_THINK_PROVIDER": req.deep_provider,
+        "TRADINGAGENTS_OUTPUT_LANGUAGE": req.output_language,
+        "TRADINGAGENTS_MAX_DEBATE_ROUNDS": str(req.debate_rounds) if req.debate_rounds is not None else None,
+        "TRADINGAGENTS_MAX_RISK_ROUNDS": str(req.risk_rounds) if req.risk_rounds is not None else None,
+    }
+    allowed_providers = set(PROVIDERS)
+    for key, value in overrides.items():
+        if value is None:
+            continue
+        if key.endswith("_PROVIDER") and value.strip().lower() not in allowed_providers:
+            raise HTTPException(status_code=422, detail="Unsupported provider value for " + key)
+        run_env[key] = value.strip().lower() if key.endswith("_PROVIDER") else value.strip()
     try:
         result = subprocess.run(args, capture_output=True, text=True,
             timeout=int(os.getenv("TRADINGAGENTS_ANALYZE_TIMEOUT_SECONDS", "900")),
-            check=False, env=os.environ.copy())
+            check=False, env=run_env)
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=504, detail="Analysis timed out; check backend logs and resume using checkpoints.") from None
     except OSError:
