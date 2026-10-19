@@ -126,15 +126,15 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(10) }
         }
 
-    private fun endpoint(path: String): String {
+    private fun backendBase(): String {
         val base = api.text.toString().trim().trimEnd('/')
         require(base.startsWith("https://")) { "Enter your deployed HTTPS backend URL first." }
         getSharedPreferences("tradingagents_mobile", MODE_PRIVATE).edit().putString("backend_url", base).apply()
-        return base + path
+        return base
     }
 
-    private fun request(path: String, body: String? = null): JSONObject {
-        val c = URL(endpoint(path)).openConnection() as HttpURLConnection
+    private fun request(baseUrl: String, path: String, body: String? = null): JSONObject {
+        val c = URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
         c.requestMethod = if (body == null) "GET" else "POST"
         c.connectTimeout = 10000; c.readTimeout = 260000
         c.setRequestProperty("Accept", "application/json")
@@ -157,10 +157,15 @@ class MainActivity : Activity() {
     }
 
     private fun checkHealth() {
+        val base = try { backendBase() } catch (e: Exception) {
+            status.text = "●  BACKEND URL REQUIRED"; status.setTextColor(Color.YELLOW)
+            result.text = e.message
+            return
+        }
         busy(true, "●  CHECKING BACKEND…")
         thread {
             try {
-                val d = request("/health")
+                val d = request(base, "/health")
                 runOnUiThread {
                     val ready = d.optBoolean("analysis_ready", false)
                     val cli = d.optBoolean("framework_cli_available", false)
@@ -188,11 +193,16 @@ class MainActivity : Activity() {
         if (!symbol.matches(Regex("[A-Za-z0-9.^=\\-]{1,20}"))) {
             result.text = "Enter a valid ticker / symbol."; return
         }
+        val base = try { backendBase() } catch (e: Exception) {
+            status.text = "●  BACKEND URL REQUIRED"; status.setTextColor(Color.YELLOW)
+            result.text = e.message
+            return
+        }
         busy(true, "●  RESEARCH RUNNING…")
         result.text = "Running multi-agent research. This can take several minutes. No trade signal is assumed while research is incomplete."
         thread {
             try {
-                val d = request("/v1/analyze", JSONObject().put("ticker", symbol).toString())
+                val d = request(base, "/v1/analyze", JSONObject().put("ticker", symbol).toString())
                 val report = d.optString("report", "").trim()
                 runOnUiThread {
                     status.text = if (d.optString("status") == "READY") "●  RESEARCH COMPLETE" else "●  RESEARCH UNAVAILABLE"
