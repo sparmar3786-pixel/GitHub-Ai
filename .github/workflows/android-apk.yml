@@ -23,6 +23,8 @@ jobs:
       - name: Generate Android platform files
         working-directory: mobile
         run: flutter create --platforms=android --org com.githubai --project-name tradingagents .
+      - name: Validate backend Python syntax
+        run: python -m py_compile backend/app.py backend/advanced.py
       - name: Resolve Flutter dependencies
         working-directory: mobile
         run: flutter pub get
