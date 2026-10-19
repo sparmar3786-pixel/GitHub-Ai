@@ -82,7 +82,7 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
         base.hasFragment ||
         base.host == 'localhost' ||
         base.host == '127.0.0.1') {
-      throw const FormatException('Enter the public HTTPS URL of the TradingAgents backend.');
+      throw const FormatException('TradingAgents backend URL is missing or invalid. Enter the separately deployed public HTTPS base URL (for example https://your-service.up.railway.app), without /health or /v1 paths. The saved URL is shared across all research tabs.');
     }
     return base.replace(path: '${base.path.replaceAll(RegExp(r'/+$'), '')}$path');
   }
@@ -205,7 +205,7 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
                 decoration: const InputDecoration(
                   labelText: 'TradingAgents backend HTTPS URL',
                   hintText: 'https://your-tradingagents-api.example.com',
-                  helperText: 'Deploy the repository backend separately, then enter its public HTTPS URL.',
+                  helperText: 'Enter the separately deployed TradingAgents API base URL once; it is shared across the research tabs.',
                 ),
               ),
               const SizedBox(height: 8),
