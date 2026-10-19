@@ -144,6 +144,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(tabs, contains('Dashboard'));
+    expect(tabs, contains('AI Research'));
     expect(tabs, contains('Market'));
     expect(tabs, isNot(contains('Signals')));
     expect(tabs, isNot(contains('Strategies')));
