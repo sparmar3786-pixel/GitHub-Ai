@@ -1,53 +1,41 @@
-# AI Trading Research — Android
+# AI-TRADING Mobile UI — GitHub-Ai
 
-A native Android research client with an AI-TRADING-inspired dark navy/teal UI, backed by the open-source [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) multi-agent research framework.
+The Android APK is built from the Flutter app in `mobile/`, ported from the AI-TRADING repository's `flutter_app/` source. The separate original snapshot remains under `upstream/AI-TRADING/`.
 
-## Components
+## UI tabs included
 
-- `android/`: native Android APK with backend health check, ticker input, research execution and report display.
-- `backend/`: FastAPI adapter that invokes the upstream TradingAgents CLI.
-- `upstream/TradingAgents/`: imported upstream source snapshot and its license/notices.
-- `.github/workflows/android-apk.yml`: builds a debug APK and uploads `tradingagents-debug-apk`.
+The Flutter app's tab navigation includes Dashboard, Market, Option Chain, OI Lab, Indicators, Signals, Risk, Backtesting, API, Data Health, Broker Home, Strategies, Quant Engine, Quant Signal, Strategy Signal, and Signal Calendar. The imported source files are kept as the starting point rather than recreating those screens in the former one-screen Kotlin prototype.
+
+## Repository layout
+
+- `mobile/`: Flutter Android app source used to build the APK.
+- `android/`: previous native Kotlin prototype; the APK workflow now builds `mobile/`.
+- `backend/`: separate FastAPI adapter for the TradingAgents research framework.
+- `upstream/AI-TRADING/`: imported AI-TRADING source snapshot.
+- `upstream/TradingAgents/`: imported TradingAgents source snapshot and notices.
+- `.github/workflows/android-apk.yml`: generates Android platform files, runs Flutter tests, builds a debug APK, and uploads the artifact.
 
 ## Build APK
 
-Open [GitHub Actions → Android APK](https://github.com/sparmar3786-pixel/GitHub-Ai/actions/workflows/android-apk.yml) and choose **Run workflow**. After a successful run, download `tradingagents-debug-apk` from the run's Artifacts section. The APK artifact is a debug build, not a Play Store-signed release.
+Open [GitHub Actions → Android APK](https://github.com/sparmar3786-pixel/GitHub-Ai/actions/workflows/android-apk.yml). After a successful run, download `ai-trading-ui-debug-apk` from the run's Artifacts section. It is a debug APK, not a Play Store-signed release.
 
-## Backend setup
+The workflow uses the Flutter source under `mobile/`; changes to the older Kotlin prototype do not automatically change this APK.
 
-The APK does not bundle model credentials and cannot perform AI analysis without a deployed backend.
+## Backend integration status
 
-For a local backend, install the framework and adapter dependencies:
+The Flutter UI is a port of the repository's existing AI-TRADING Flutter app, not a claim that every screen's data path has been newly integrated or verified. The UI uses the backend URLs and endpoints defined in `mobile/lib/config.dart` and `mobile/lib/api.dart`. Verify live Angel One authentication, fresh market data, option-chain completeness, and each screen's endpoint on a deployed backend before relying on any trading display.
 
-```bash
-python -m pip install -r backend/requirements.txt
-python -m pip install "git+https://github.com/TauricResearch/TradingAgents.git"
-cd backend
-uvicorn app:app --host 0.0.0.0 --port 8000
-```
+The separate `backend/` service wraps the upstream TradingAgents CLI. It is not automatically connected to the mobile app just because both sources are in this repository. Provider credentials belong on the backend only.
 
-For container deployment, build with `backend/Dockerfile` using the repository root as the build context. Set the service's root/build context accordingly.
+## Safety
 
-Configure a supported provider API key on the backend only (for example `OPENROUTER_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`). Also configure the matching provider/model settings, for example:
+- The app is intended for research/signals, not a guarantee of returns.
+- A healthy HTTP endpoint does not by itself prove live market ticks or valid signals.
+- Do not commit broker credentials, API keys, TOTP seeds, JWTs, refresh tokens, or feed tokens.
+- Missing or stale market data must not be treated as an actionable trade.
+- Keep upstream licenses and notices with imported source.
 
-- `TRADINGAGENTS_LLM_PROVIDER` — provider identifier accepted by the installed framework.
-- `TRADINGAGENTS_QUICK_THINK_LLM` and `TRADINGAGENTS_DEEP_THINK_LLM` — model IDs supported by that provider.
-- `TRADINGAGENTS_OUTPUT_LANGUAGE=English`
-- `TRADINGAGENTS_MAX_DEBATE_ROUNDS=1` and `TRADINGAGENTS_MAX_RISK_ROUNDS=1`
-- `TRADINGAGENTS_COMMAND=tradingagents` and `TRADINGAGENTS_ANALYZE_TEMPLATE` — the Dockerfile supplies a non-interactive default template.
+## Upstream sources
 
-Configure the market-data providers required by the chosen analysis. The backend health endpoint checks that required settings exist; a successful health response still does not prove that provider quota, model access, or market data is working.
-
-After deployment, paste the backend's public HTTPS URL into the APK and tap **CHECK CONNECTION**, then **RUN AI RESEARCH**.
-
-## Safety and limitations
-
-- Research-only app: no broker login, order placement, or automatic execution.
-- Provider/API secrets must never be placed in the APK or committed to Git.
-- If backend/provider/data access fails, the app reports failure and does not invent a result.
-- TradingAgents is a research framework, not a guaranteed strategy or financial advice.
-- The starter UI has been adapted to AI-TRADING visual styling; this does not by itself integrate AI-TRADING's Angel One live feed or its options-signal engine.
-
-## Attribution
-
-Upstream TradingAgents by Tauric Research: https://github.com/TauricResearch/TradingAgents. The upstream project is distributed under Apache-2.0; retain upstream copyright, license, and notices with copied upstream source. This repository adds a separate mobile integration layer.
+- AI-TRADING: https://github.com/sparmar3786-pixel/AI-TRADING
+- TradingAgents: https://github.com/TauricResearch/TradingAgents
