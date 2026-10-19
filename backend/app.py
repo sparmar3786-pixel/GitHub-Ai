@@ -45,9 +45,9 @@ class AnalyzeResponse(BaseModel):
     report: str | None = None
 
 class BacktestRequest(BaseModel):
-    ticker: str = Field(min_length=1, max_length=20, pattern=r"^[A-Za-z0-9.\\-^=]+$")
-    start_date: str = Field(pattern=r"^\\d{4}-\\d{2}-\\d{2}$")
-    end_date: str = Field(pattern=r"^\\d{4}-\\d{2}-\\d{2}$")
+    ticker: str = Field(min_length=1, max_length=20, pattern=r"^[A-Za-z0-9.\-^=]+$")
+    start_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    end_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     every_n_days: int = Field(default=7, ge=1, le=365)
 
 
