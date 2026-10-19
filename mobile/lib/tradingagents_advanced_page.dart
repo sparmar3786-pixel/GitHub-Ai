@@ -20,6 +20,13 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
   final start = TextEditingController(text: '2026-01-01');
   final end = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
   final runId = TextEditingController();
+  final quickModel = TextEditingController();
+  final deepModel = TextEditingController();
+  final quickProvider = TextEditingController();
+  final deepProvider = TextEditingController();
+  final outputLanguage = TextEditingController(text: 'English');
+  final debateRounds = TextEditingController(text: '1');
+  final riskRounds = TextEditingController(text: '1');
   final Set<String> analysts = {'market', 'news', 'fundamentals', 'social'};
   bool usePortfolio = true, checkpoint = true, html = true, busy = false;
   Map<String, dynamic> config = {};
@@ -70,6 +77,14 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
     if (!mounted) return;
     setState(() {
       config = c;
+      final settings = c['settings'] is Map ? Map<String, dynamic>.from(c['settings'] as Map) : <String, dynamic>{};
+      quickModel.text = (settings['TRADINGAGENTS_QUICK_THINK_LLM'] ?? '').toString();
+      deepModel.text = (settings['TRADINGAGENTS_DEEP_THINK_LLM'] ?? '').toString();
+      quickProvider.text = (settings['TRADINGAGENTS_QUICK_THINK_PROVIDER'] ?? '').toString();
+      deepProvider.text = (settings['TRADINGAGENTS_DEEP_THINK_PROVIDER'] ?? '').toString();
+      outputLanguage.text = (settings['TRADINGAGENTS_OUTPUT_LANGUAGE'] ?? 'English').toString();
+      debateRounds.text = (settings['TRADINGAGENTS_MAX_DEBATE_ROUNDS'] ?? '1').toString();
+      riskRounds.text = (settings['TRADINGAGENTS_MAX_RISK_ROUNDS'] ?? '1').toString();
       reports = r['reports'] is List ? List<dynamic>.from(r['reports'] as List) : [];
       cash.text = p['cash']?.toString() ?? '';
       currency.text = p['currency']?.toString() ?? 'INR';
@@ -111,6 +126,13 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
       'ticker': ticker.text.trim().toUpperCase(), 'date': analysisDate.text.trim(),
       'analysts': ['market','news','fundamentals','social'].where(analysts.contains).toList(),
       'use_portfolio': usePortfolio, 'checkpoint_enabled': checkpoint, 'clear_checkpoints': false, 'html_report': html,
+      'quick_model': quickModel.text.trim().isEmpty ? null : quickModel.text.trim(),
+      'deep_model': deepModel.text.trim().isEmpty ? null : deepModel.text.trim(),
+      'quick_provider': quickProvider.text.trim().isEmpty ? null : quickProvider.text.trim(),
+      'deep_provider': deepProvider.text.trim().isEmpty ? null : deepProvider.text.trim(),
+      'output_language': outputLanguage.text.trim().isEmpty ? null : outputLanguage.text.trim(),
+      'debate_rounds': int.tryParse(debateRounds.text.trim()),
+      'risk_rounds': int.tryParse(riskRounds.text.trim()),
     });
     if (mounted) setState(() => resultText = (r['summary'] ?? r['status']).toString() + '\n\n' + (r['report'] ?? '').toString());
   });
@@ -166,7 +188,8 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
   @override
   void dispose() {
     url.dispose(); cash.dispose(); currency.dispose(); positions.dispose(); ticker.dispose(); tickers.dispose();
-    analysisDate.dispose(); start.dispose(); end.dispose(); runId.dispose(); super.dispose();
+    analysisDate.dispose(); start.dispose(); end.dispose(); runId.dispose(); quickModel.dispose(); deepModel.dispose();
+    quickProvider.dispose(); deepProvider.dispose(); outputLanguage.dispose(); debateRounds.dispose(); riskRounds.dispose(); super.dispose();
   }
 
   @override
@@ -221,7 +244,15 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
         Text('Detected providers: ' + (providers.isEmpty ? 'none detected' : providers.join(', '))),
         for (final key in settings.keys) ListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(key),
           subtitle: Text(settings[key]?.toString().isNotEmpty == true ? settings[key].toString() : 'Not configured')),
-        const Text('Read-only environment summary. Change provider, quick/deep model and rounds in backend environment settings. Secrets never return to the app.'),
+        const Text('These overrides apply only to the next research run. Provider credentials must already exist on the backend; secrets never return to the app.'),
+        field(quickProvider, 'Quick-tier provider (optional)', hint: 'openai, anthropic, openrouter, nvidia, ollama'),
+        field(quickModel, 'Quick-tier model (optional)', hint: 'Model ID configured for the selected provider'),
+        field(deepProvider, 'Deep-tier provider (optional)', hint: 'openai, anthropic, openrouter, nvidia, ollama'),
+        field(deepModel, 'Deep-tier model (optional)', hint: 'Model ID configured for the selected provider'),
+        field(outputLanguage, 'Report language'),
+        field(debateRounds, 'Debate rounds (1–10)'),
+        field(riskRounds, 'Risk rounds (1–10)'),
+        const Text('If an override fails, verify the model exists for that provider and its backend-only API key is configured.'),
       ]),
       section('6. HTML reports & memory', Icons.description, [
         Row(children: [const Expanded(child: Text('Saved reports', style: TextStyle(fontWeight: FontWeight.w800))),
