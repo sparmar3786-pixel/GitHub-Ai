@@ -10,7 +10,7 @@ import 'broker_home_prototype_page.dart';
 import 'strategy_library_page.dart';
 import 'tradingagents_research_page.dart';
 
-const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Risk','Backtesting','API','Data Health','Broker Home','Signal Calendar','AI Research'];
+const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Risk','Backtesting','API','Data Health','Broker Home','Signal Calendar','AI Research','Analyst Team','Bull/Bear Debate','Trader Decision','Risk & Portfolio','Research Backtest','Reports & Memory','Provider Status'];
 const indexes = ['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','BANKEX'];
 
 void main() {
@@ -530,7 +530,14 @@ class _FreshHomeState extends State<FreshHome> with WidgetsBindingObserver {
           onIndexSelected: (value) => setState(() => selectedIndex = value),
         ),
         const SignalCalendarPage(),
-        const TradingAgentsResearchPage(),
+        const TradingAgentsResearchPage(initialModule: 'Overview'),
+        const TradingAgentsResearchPage(initialModule: 'Analyst Team'),
+        const TradingAgentsResearchPage(initialModule: 'Bull / Bear Debate'),
+        const TradingAgentsResearchPage(initialModule: 'Trader Decision'),
+        const TradingAgentsResearchPage(initialModule: 'Risk & Portfolio'),
+        const TradingAgentsResearchPage(initialModule: 'Backtesting'),
+        const TradingAgentsResearchPage(initialModule: 'Reports & Memory'),
+        const TradingAgentsResearchPage(initialModule: 'Provider Status'),
       ]),
     ),
   );
@@ -549,6 +556,13 @@ IconData _tabIcon(int index) => switch (index) {
   9 => Icons.monitor_heart_outlined,
   10 => Icons.calendar_month_outlined,
   11 => Icons.psychology_alt_outlined,
+  12 => Icons.analytics_outlined,
+  13 => Icons.forum_outlined,
+  14 => Icons.candlestick_chart_outlined,
+  15 => Icons.shield_outlined,
+  16 => Icons.query_stats,
+  17 => Icons.description_outlined,
+  18 => Icons.key_outlined,
   _ => Icons.layers_outlined,
 };
 
