@@ -33,6 +33,7 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
   final _startDate = TextEditingController(text: '2026-01-01');
   final _endDate = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
   late String _module;
+  final Set<String> _selectedAnalysts = {'market', 'news', 'fundamentals', 'social'};
   bool _busy = false;
   Map<String, dynamic> _health = const {};
   String? _error;
@@ -143,7 +144,16 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
   Future<void> _analyze() => _run(() async {
         final ticker = _ticker.text.trim().toUpperCase();
         if (ticker.isEmpty) throw const FormatException('Enter a ticker, for example RELIANCE.NS.');
-        final result = await _post('/v1/analyze', {'ticker': ticker, 'date': _date.text.trim()});
+        if (_selectedAnalysts.isEmpty) {
+          throw const FormatException('Select at least one analyst before running research.');
+        }
+        final result = await _post('/v1/analyze', {
+          'ticker': ticker,
+          'date': _date.text.trim(),
+          'analysts': ['market', 'news', 'fundamentals', 'social']
+              .where(_selectedAnalysts.contains)
+              .toList(),
+        });
         if (mounted) {
           setState(() {
             _report = (result['report'] ?? result['summary'] ?? 'No report returned.').toString();
@@ -229,6 +239,35 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
               const SizedBox(height: 8),
               Text(_researchModules[_module]!, style: const TextStyle(color: Colors.white70)),
               if (_module == 'Overview' || _module == 'Analyst Team' || _module == 'Bull / Bear Debate' || _module == 'Trader Decision' || _module == 'Risk & Portfolio') ...[
+                const SizedBox(height: 10),
+                const Text('Analyst selection', style: TextStyle(fontWeight: FontWeight.w700)),
+                const Text('Choose which research sources participate in this run.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 2,
+                  children: [
+                    for (final analyst in const {
+                      'market': 'Technical / Market',
+                      'news': 'News',
+                      'fundamentals': 'Fundamentals',
+                      'social': 'Social sentiment',
+                    }.entries)
+                      FilterChip(
+                        label: Text(analyst.value),
+                        selected: _selectedAnalysts.contains(analyst.key),
+                        onSelected: _busy ? null : (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedAnalysts.add(analyst.key);
+                            } else {
+                              _selectedAnalysts.remove(analyst.key);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 TextField(controller: _date, decoration: const InputDecoration(labelText: 'Analysis date (YYYY-MM-DD)')),
                 const SizedBox(height: 8),
