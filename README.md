@@ -28,7 +28,15 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 
 For container deployment, build with `backend/Dockerfile` using the repository root as the build context. Set the service's root/build context accordingly.
 
-Configure a supported provider API key on the backend only (for example `OPENROUTER_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`). Set `TRADINGAGENTS_COMMAND` and `TRADINGAGENTS_ANALYZE_TEMPLATE` to match the installed CLI and selected model settings. Configure the market-data providers required by the chosen analysis. The health endpoint detects basic setup only; a successful health response does not prove that provider quota, model access, or market data is working.
+Configure a supported provider API key on the backend only (for example `OPENROUTER_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`). Also configure the matching provider/model settings, for example:
+
+- `TRADINGAGENTS_LLM_PROVIDER` — provider identifier accepted by the installed framework.
+- `TRADINGAGENTS_QUICK_THINK_LLM` and `TRADINGAGENTS_DEEP_THINK_LLM` — model IDs supported by that provider.
+- `TRADINGAGENTS_OUTPUT_LANGUAGE=English`
+- `TRADINGAGENTS_MAX_DEBATE_ROUNDS=1` and `TRADINGAGENTS_MAX_RISK_ROUNDS=1`
+- `TRADINGAGENTS_COMMAND=tradingagents` and `TRADINGAGENTS_ANALYZE_TEMPLATE` — the Dockerfile supplies a non-interactive default template.
+
+Configure the market-data providers required by the chosen analysis. The backend health endpoint checks that required settings exist; a successful health response still does not prove that provider quota, model access, or market data is working.
 
 After deployment, paste the backend's public HTTPS URL into the APK and tap **CHECK CONNECTION**, then **RUN AI RESEARCH**.
 
