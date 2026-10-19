@@ -31,6 +31,7 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
   bool usePortfolio = true, checkpoint = true, html = true, busy = false;
   Map<String, dynamic> config = {};
   List<dynamic> reports = [];
+  String memoryText = '';
   String resultText = '', error = '', status = 'Enter a public HTTPS TradingAgents backend URL.';
 
   Uri endpoint(String path) {
@@ -74,6 +75,7 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
     final c = await get('/config');
     final p = await get('/portfolio');
     final r = await get('/reports');
+    final m = await get('/memory');
     if (!mounted) return;
     setState(() {
       config = c;
@@ -86,6 +88,7 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
       debateRounds.text = (settings['TRADINGAGENTS_MAX_DEBATE_ROUNDS'] ?? '1').toString();
       riskRounds.text = (settings['TRADINGAGENTS_MAX_RISK_ROUNDS'] ?? '1').toString();
       reports = r['reports'] is List ? List<dynamic>.from(r['reports'] as List) : [];
+      memoryText = m['available'] == true ? (m['content'] ?? '').toString() : '';
       cash.text = p['cash']?.toString() ?? '';
       currency.text = p['currency']?.toString() ?? 'INR';
       final rows = p['positions'] is List ? List<dynamic>.from(p['positions'] as List) : [];
@@ -263,7 +266,10 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
           title: Text((item['name'] ?? 'Report').toString()),
           subtitle: Text((item['format'] ?? 'file').toString() + ' • ' + (item['size_bytes'] ?? '?').toString() + ' bytes • ' + (item['modified_at'] ?? '').toString()),
           trailing: IconButton(icon: const Icon(Icons.open_in_browser), onPressed: () => openReport(Map<String, dynamic>.from(item)))),
-        const Text('Decision memory is shown only if the framework actually saves it; no synthetic history is generated.'),
+        const Text('Saved decision memory log'),
+        if (memoryText.isEmpty) const Text('No memory log found at the configured backend path yet.'),
+        if (memoryText.isNotEmpty) SelectableText(memoryText, style: const TextStyle(fontSize: 12)),
+        const Text('Memory content is displayed only when the backend framework has written the configured log.'),
       ]),
       section('7. Point-in-time data integrity', Icons.verified_user_outlined, [
         const ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.info_outline), title: Text('Historical integrity: NOT VERIFIED'),
