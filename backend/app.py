@@ -8,9 +8,25 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="TradingAgents Mobile API", version="0.3.0")
+
+# Flutter web is hosted on a separate Render origin. Configure a comma-separated
+# allowlist with TRADINGAGENTS_CORS_ORIGINS; "*" is the no-credentials default.
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("TRADINGAGENTS_CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 PROVIDER_KEY_GROUPS = {
     "openai": ("OPENAI_API_KEY",),
