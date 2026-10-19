@@ -203,6 +203,13 @@ def advanced_run(req: ResearchRun):
         raise HTTPException(status_code=500, detail="Invalid TRADINGAGENTS_ANALYZE_TEMPLATE placeholders.") from None
     def has_flag(*flags):
         return any(arg in flags for arg in args)
+    # Respect the mobile analyst selection even when the deployment template
+    # contains a hard-coded --analysts value.
+    if "--analysts" in args:
+        analyst_index = args.index("--analysts")
+        if analyst_index + 1 >= len(args):
+            raise HTTPException(status_code=500, detail="Analyze template has --analysts without a value.")
+        args[analyst_index + 1] = ",".join(req.analysts)
     if not has_flag("--ticker"):
         args.extend(["--ticker", req.ticker.upper()])
     if not has_flag("--date"):
