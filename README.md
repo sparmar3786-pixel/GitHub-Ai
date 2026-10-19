@@ -6,7 +6,7 @@ The Android APK is built from the Flutter app in `mobile/`, ported from the AI-T
 
 The Flutter APK is built from `mobile/`. Its main navigation includes Dashboard, Market, Option Chain, OI Lab, Indicators, Risk, Backtesting, API, Data Health, Broker Home, Signal Calendar, and **AI Research**. The former Signals and Strategies navigation pages are intentionally removed from this APK.
 
-The AI Research workspace provides module views for the Analyst Team, Bull/Bear Debate, Trader Decision, Risk & Portfolio, Backtesting, Reports & Memory, and Provider Status. Analysis and backtesting require a separately deployed TradingAgents backend. The APK does not run the Python/LangGraph framework locally and does not place broker orders.
+The main navigation has dedicated tabs for AI Research, Analyst Team, Bull/Bear Debate, Trader Decision, Risk & Portfolio, Research Backtest, Reports & Memory, and Provider Status. The pages share the TradingAgents backend connection but open the relevant module by default. Analysis and backtesting require a separately deployed TradingAgents backend. The APK does not run the Python/LangGraph framework locally and does not place broker orders.
 
 ## Repository layout
 
