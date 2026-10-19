@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: tradingagents-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: TRADINGAGENTS_CORS_ORIGINS
+        value: "*"
+      - key: TRADINGAGENTS_LLM_PROVIDER
+        sync: false
+      - key: TRADINGAGENTS_QUICK_THINK_LLM
+        sync: false
+      - key: TRADINGAGENTS_DEEP_THINK_LLM
+        sync: false
+      - key: TRADINGAGENTS_OUTPUT_LANGUAGE
+        value: English
+      - key: TRADINGAGENTS_MAX_DEBATE_ROUNDS
+        value: "1"
+      - key: TRADINGAGENTS_MAX_RISK_ROUNDS
+        value: "1"
+      - key: TRADINGAGENTS_CHECKPOINT_ENABLED
+        value: "true"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: DASHSCOPE_API_KEY
+        sync: false
+      - key: ZHIPUAI_API_KEY
+        sync: false
+      - key: MINIMAX_API_KEY
+        sync: false
+  - type: web
+    name: tradingagents-frontend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./mobile/Dockerfile.web
+    dockerContext: ./mobile
