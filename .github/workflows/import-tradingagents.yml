@@ -1,7 +1,11 @@
-name: Bulk import TradingAgents source
+name: Bulk import TradingAgents source and paper
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-tradingagents.yml"
 
 permissions:
   contents: write
@@ -15,17 +19,65 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Copy all source files
+      - name: Checkout pinned upstream source snapshot
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth 1 --branch main https://github.com/TauricResearch/TradingAgents.git /tmp/TradingAgents
+          git clone https://github.com/TauricResearch/TradingAgents.git /tmp/TradingAgents
+          git -C /tmp/TradingAgents checkout e8f5503e9b86d5c2710b0c76b1f686703968c9df
           rm -rf /tmp/TradingAgents/.git
-          cp -a /tmp/TradingAgents/. .
-          git add -A
+          mkdir -p upstream/TradingAgents docs
+          rsync -a --delete /tmp/TradingAgents/ upstream/TradingAgents/
+
+      - name: Add research paper and verify imported source
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 https://arxiv.org/pdf/2412.20138v7 -o docs/2412.20138v7.pdf
+
+          python - <<'PY'
+          from pathlib import Path
+          root = Path("upstream/TradingAgents")
+          files = [p for p in root.rglob("*") if p.is_file()]
+          total_bytes = sum(p.stat().st_size for p in files)
+          expected_files = 212
+          expected_bytes = 5114619
+          if len(files) != expected_files or total_bytes != expected_bytes:
+              raise SystemExit(
+                  f"Source verification failed: files={len(files)} bytes={total_bytes}; "
+                  f"expected files={expected_files} bytes={expected_bytes}"
+              )
+          paper = Path("docs/2412.20138v7.pdf")
+          if not paper.is_file() or paper.stat().st_size < 100000:
+              raise SystemExit("Research PDF download failed or is unexpectedly small")
+          import hashlib
+          paper_sha = hashlib.sha256(paper.read_bytes()).hexdigest()
+          manifest = f"""# TradingAgents Import Manifest
+
+          - Upstream repository: https://github.com/TauricResearch/TradingAgents
+          - Pinned upstream commit: e8f5503e9b86d5c2710b0c76b1f686703968c9df
+          - Source location: upstream/TradingAgents/
+          - Verified source files: {len(files)}
+          - Verified source bytes: {total_bytes}
+          - Research paper: docs/2412.20138v7.pdf (arXiv:2412.20138v7)
+          - Downloaded PDF bytes: {paper.stat().st_size}
+          - Downloaded PDF SHA-256: {paper_sha}
+
+          The source snapshot is isolated from the app/backend wrapper so upstream files do not overwrite them.
+          The supplied ZIP's extracted total was 5,114,619 bytes across 212 files, matching this pinned upstream snapshot.
+          """
+          Path("docs/IMPORT_MANIFEST.md").write_text(manifest, encoding="utf-8")
+          print(f"Verified {len(files)} files / {total_bytes} bytes; paper {paper.stat().st_size} bytes")
+          PY
+
+      - name: Commit and push imported files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add upstream/TradingAgents docs/2412.20138v7.pdf docs/IMPORT_MANIFEST.md docs/TradingAgents-paper-analysis.md
           if git diff --cached --quiet; then
-            echo "No file changes to import."
+            echo "Imported source and PDF already match the pinned snapshot."
             exit 0
           fi
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Import TradingAgents source files in bulk"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Import TradingAgents source and research paper in bulk"
           git push
