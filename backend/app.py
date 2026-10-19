@@ -271,3 +271,8 @@ def analyze(req: AnalyzeRequest):
         ),
         report=output[-20000:],
     )
+
+
+# Additional research workflows are isolated in a router so the original API remains compatible.
+from advanced import router as advanced_router
+app.include_router(advanced_router)
