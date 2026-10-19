@@ -16,7 +16,9 @@ const _researchModules = <String, String>{
 };
 
 class TradingAgentsResearchPage extends StatefulWidget {
-  const TradingAgentsResearchPage({super.key});
+  const TradingAgentsResearchPage({super.key, this.initialModule = 'Overview'});
+
+  final String initialModule;
 
   @override
   State<TradingAgentsResearchPage> createState() => _TradingAgentsResearchPageState();
@@ -30,7 +32,7 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
   final _date = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
   final _startDate = TextEditingController(text: '2026-01-01');
   final _endDate = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
-  String _module = 'Overview';
+  late String _module;
   bool _busy = false;
   Map<String, dynamic> _health = const {};
   String? _error;
@@ -41,6 +43,7 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
   @override
   void initState() {
     super.initState();
+    _module = _researchModules.containsKey(widget.initialModule) ? widget.initialModule : 'Overview';
     _restoreUrl();
   }
 
@@ -218,13 +221,6 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
               const Text('Research controls', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
               TextField(controller: _ticker, decoration: const InputDecoration(labelText: 'Ticker / symbol', hintText: 'RELIANCE.NS, AAPL, NVDA')),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _module,
-                decoration: const InputDecoration(labelText: 'Research module'),
-                items: _researchModules.keys.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-                onChanged: _busy ? null : (v) { if (v != null) setState(() => _module = v); },
-              ),
               const SizedBox(height: 8),
               Text(_researchModules[_module]!, style: const TextStyle(color: Colors.white70)),
               if (_module == 'Overview' || _module == 'Analyst Team' || _module == 'Bull / Bear Debate' || _module == 'Trader Decision' || _module == 'Risk & Portfolio') ...[
