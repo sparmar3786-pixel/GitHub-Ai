@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class TradingAgentsAdvancedPage extends StatefulWidget {
@@ -33,14 +34,32 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
   Map<String, dynamic> config = {};
   List<dynamic> reports = [];
   String memoryText = '';
-  String resultText = '', error = '', status = 'Enter a public HTTPS TradingAgents backend URL.';
+  String resultText = '', error = '', status = 'Enter the public HTTPS TradingAgents backend URL once; it is shared across research tabs.';
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreBackendUrl();
+  }
+
+  Future<void> _restoreBackendUrl() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('tradingagents_backend_url');
+      if (saved != null && saved.trim().isNotEmpty && mounted && url.text.trim().isEmpty) {
+        setState(() => url.text = saved.trim());
+      }
+    } catch (_) {
+      // The user can still enter the URL manually if preferences are unavailable.
+    }
+  }
 
   Uri endpoint(String path) {
     final raw = url.text.trim().replaceAll(RegExp(r'/+$'), '');
     final base = Uri.tryParse(raw);
     if (base == null || base.scheme != 'https' || base.host.isEmpty || base.userInfo.isNotEmpty ||
         base.hasQuery || base.hasFragment || base.host == 'localhost' || base.host == '127.0.0.1') {
-      throw const FormatException('Enter a public HTTPS backend URL.');
+      throw const FormatException('TradingAgents backend URL is missing or invalid. Enter its deployed public HTTPS base URL (not an endpoint path), then tap Connect / refresh. The URL is shared with the other research tabs.');
     }
     return base.replace(path: base.path.replaceAll(RegExp(r'/+$'), '') + '/v1' + path);
   }
@@ -67,7 +86,12 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
   Future<void> action(Future<void> Function() callback) async {
     if (busy) return;
     setState(() { busy = true; error = ''; status = 'Working…'; });
-    try { await callback(); if (mounted) setState(() => status = 'Request completed'); }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('tradingagents_backend_url', url.text.trim());
+      await callback();
+      if (mounted) setState(() => status = 'Request completed');
+    }
     catch (e) { if (mounted) setState(() { error = e.toString().replaceFirst('Exception: ', ''); status = 'Action failed'; }); }
     finally { if (mounted) setState(() => busy = false); }
   }
@@ -204,7 +228,8 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
     return ListView(padding: const EdgeInsets.all(12), children: [
       const Text('TRADINGAGENTS ADVANCED WORKSPACE', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
       const Text('Portfolio • checkpoint recovery • reports • grid backtests • model settings • historical integrity'),
-      field(url, 'Backend public HTTPS URL', hint: 'https://your-service.up.railway.app'),
+      field(url, 'TradingAgents backend public HTTPS URL', hint: 'https://your-deployed-tradingagents-service.example.com'),
+      const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('Enter the separately deployed TradingAgents FastAPI service base URL once. This URL is shared with AI Research, Analyst Team, Debate, Backtest, Reports and Provider Status tabs. Existing signal-backend URLs are not interchangeable unless they host this TradingAgents API.')),
       Wrap(spacing: 8, children: [
         FilledButton.icon(onPressed: busy ? null : refreshAll, icon: const Icon(Icons.sync), label: const Text('Connect / refresh')),
         OutlinedButton.icon(onPressed: busy ? null : clearCheckpoints, icon: const Icon(Icons.delete_sweep), label: const Text('Clear checkpoints')),
