@@ -1,0 +1,31 @@
+name: Bulk import TradingAgents source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout destination repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copy all source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch main https://github.com/TauricResearch/TradingAgents.git /tmp/TradingAgents
+          rm -rf /tmp/TradingAgents/.git
+          cp -a /tmp/TradingAgents/. .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No file changes to import."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Import TradingAgents source files in bulk"
+          git push
