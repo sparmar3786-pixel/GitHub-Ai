@@ -44,6 +44,12 @@ class AnalyzeResponse(BaseModel):
     summary: str
     report: str | None = None
 
+class BacktestRequest(BaseModel):
+    ticker: str = Field(min_length=1, max_length=20, pattern=r"^[A-Za-z0-9.\\-^=]+$")
+    start_date: str = Field(pattern=r"^\\d{4}-\\d{2}-\\d{2}$")
+    end_date: str = Field(pattern=r"^\\d{4}-\\d{2}-\\d{2}$")
+    every_n_days: int = Field(default=7, ge=1, le=365)
+
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -94,6 +100,72 @@ def configuration_gaps() -> list[str]:
     if not os.getenv("TRADINGAGENTS_ANALYZE_TEMPLATE", "").strip():
         gaps.append("TRADINGAGENTS_ANALYZE_TEMPLATE")
     return gaps
+
+
+@app.post("/v1/backtest")
+def backtest(req: BacktestRequest):
+    if not cli_available():
+        return {
+            "status": "UNAVAILABLE",
+            "ticker": req.ticker.upper(),
+            "summary": "TradingAgents CLI is missing on the backend. No backtest was run.",
+            "report": None,
+            "generated_at": now(),
+        }
+    try:
+        start = datetime.strptime(req.start_date, "%Y-%m-%d").date()
+        end = datetime.strptime(req.end_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Backtest dates must be real calendar dates in YYYY-MM-DD format.") from None
+    if start > end:
+        raise HTTPException(status_code=422, detail="Backtest start date must be on or before end date.")
+    gaps = configuration_gaps()
+    if gaps:
+        return {
+            "status": "UNAVAILABLE",
+            "ticker": req.ticker.upper(),
+            "summary": "Backend setup incomplete (" + ", ".join(gaps) + "). No backtest was run.",
+            "report": None,
+            "generated_at": now(),
+        }
+
+    cmd = [
+        *command_parts(),
+        "backtest",
+        req.ticker.upper(),
+        "--start", req.start_date,
+        "--end", req.end_date,
+        "--every", str(req.every_n_days),
+    ]
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=int(os.getenv("TRADINGAGENTS_BACKTEST_TIMEOUT_SECONDS", "360")),
+            check=False,
+            env=os.environ.copy(),
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Backtest timed out; no result returned.") from None
+    except OSError:
+        raise HTTPException(status_code=500, detail="Could not start the configured TradingAgents CLI.") from None
+
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=502,
+            detail="Upstream backtest failed. Check backend logs, provider credentials, historical data access and model settings.",
+        )
+    output = (result.stdout or "").strip()
+    if not output:
+        raise HTTPException(status_code=502, detail="Upstream backtest returned empty output; no result returned.")
+    return {
+        "status": "READY",
+        "ticker": req.ticker.upper(),
+        "generated_at": now(),
+        "summary": "Historical backtest completed by TradingAgents CLI. Results depend on the configured model and data.",
+        "report": output[-20000:],
+    }
 
 
 @app.get("/health")
