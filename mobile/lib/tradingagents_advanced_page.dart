@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+const _defaultTradingAgentsBackendUrl = 'https://tradingagents-backend-i0a1.onrender.com';
+
 class TradingAgentsAdvancedPage extends StatefulWidget {
   const TradingAgentsAdvancedPage({super.key});
   @override
@@ -12,7 +14,7 @@ class TradingAgentsAdvancedPage extends StatefulWidget {
 }
 
 class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
-  final url = TextEditingController();
+  final url = TextEditingController(text: _defaultTradingAgentsBackendUrl);
   final cash = TextEditingController();
   final currency = TextEditingController(text: 'INR');
   final positions = TextEditingController();
@@ -46,22 +48,33 @@ class _TradingAgentsAdvancedPageState extends State<TradingAgentsAdvancedPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('tradingagents_backend_url');
-      if (saved != null && saved.trim().isNotEmpty && mounted && url.text.trim().isEmpty) {
+      if (!mounted) return;
+      if (saved != null && _isValidBaseUrl(saved)) {
         setState(() => url.text = saved.trim());
+      } else {
+        setState(() => url.text = _defaultTradingAgentsBackendUrl);
       }
     } catch (_) {
       // The user can still enter the URL manually if preferences are unavailable.
     }
   }
 
+  bool _isValidBaseUrl(String value) {
+    final raw = value.trim().replaceAll(RegExp(r'/+$'), '');
+    final base = Uri.tryParse(raw);
+    return base != null && base.scheme == 'https' && base.host.isNotEmpty &&
+        base.userInfo.isEmpty && !base.hasQuery && !base.hasFragment &&
+        (base.path.isEmpty || base.path == '/') &&
+        base.host != 'localhost' && base.host != '127.0.0.1' && base.host != '::1';
+  }
+
   Uri endpoint(String path) {
     final raw = url.text.trim().replaceAll(RegExp(r'/+$'), '');
     final base = Uri.tryParse(raw);
-    if (base == null || base.scheme != 'https' || base.host.isEmpty || base.userInfo.isNotEmpty ||
-        base.hasQuery || base.hasFragment || base.host == 'localhost' || base.host == '127.0.0.1') {
-      throw const FormatException('TradingAgents backend URL is missing or invalid. Enter its deployed public HTTPS base URL (not an endpoint path), then tap Connect / refresh. The URL is shared with the other research tabs.');
+    if (base == null || !_isValidBaseUrl(raw)) {
+      throw const FormatException('TradingAgents backend URL is missing or invalid. Use https://tradingagents-backend-i0a1.onrender.com without /health or /v1. This URL is shared across research tabs.');
     }
-    return base.replace(path: base.path.replaceAll(RegExp(r'/+$'), '') + '/v1' + path);
+    return base.replace(path: '/v1' + path);
   }
 
   Map<String, dynamic> decode(http.Response response) {
