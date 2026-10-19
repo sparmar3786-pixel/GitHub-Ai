@@ -9,8 +9,9 @@ import 'config.dart';
 import 'broker_home_prototype_page.dart';
 import 'strategy_library_page.dart';
 import 'tradingagents_research_page.dart';
+import 'tradingagents_advanced_page.dart';
 
-const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Risk','Backtesting','API','Data Health','Broker Home','Signal Calendar','AI Research','Analyst Team','Bull/Bear Debate','Trader Decision','Risk & Portfolio','Research Backtest','Reports & Memory','Provider Status'];
+const tabs = ['Dashboard','Market','Option Chain','OI Lab','Indicators','Risk','Backtesting','API','Data Health','Broker Home','Signal Calendar','AI Research','Analyst Team','Bull/Bear Debate','Trader Decision','Risk & Portfolio','Research Backtest','Reports & Memory','Provider Status','Advanced Research'];
 const indexes = ['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','BANKEX'];
 
 void main() {
@@ -538,6 +539,7 @@ class _FreshHomeState extends State<FreshHome> with WidgetsBindingObserver {
         const TradingAgentsResearchPage(initialModule: 'Backtesting'),
         const TradingAgentsResearchPage(initialModule: 'Reports & Memory'),
         const TradingAgentsResearchPage(initialModule: 'Provider Status'),
+        const TradingAgentsAdvancedPage(),
       ]),
     ),
   );
@@ -563,6 +565,7 @@ IconData _tabIcon(int index) => switch (index) {
   16 => Icons.query_stats,
   17 => Icons.description_outlined,
   18 => Icons.key_outlined,
+  19 => Icons.settings_suggest_outlined,
   _ => Icons.layers_outlined,
 };
 
