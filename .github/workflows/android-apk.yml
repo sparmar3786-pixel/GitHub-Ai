@@ -24,7 +24,9 @@ jobs:
         working-directory: mobile
         run: flutter create --platforms=android --org com.githubai --project-name tradingagents .
       - name: Validate backend Python syntax
-        run: python -m py_compile backend/app.py backend/advanced.py
+        run: python -m py_compile backend/app.py backend/advanced.py backend/ollama_status.py
+      - name: Run Ollama preflight unit tests
+        run: python -m unittest discover -s backend -p 'test_ollama_status.py' -v
       - name: Resolve Flutter dependencies
         working-directory: mobile
         run: flutter pub get
