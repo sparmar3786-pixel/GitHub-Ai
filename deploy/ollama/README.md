@@ -21,7 +21,7 @@ Ollama's API is not an authentication boundary. Never expose an unauthenticated 
 
 1. Confirm the chosen Render plan's RAM/CPU, disk support, outbound access, private networking and current monthly cost in the dashboard.
 2. Use at least 4 GB RAM as an initial sizing target for a 3B quantized model, with 8 GB preferred for operating headroom; validate with actual load tests. Model file size is not total runtime memory.
-3. Attach persistent storage at `/data` and configure Ollama to store models under `/data/models`. Ensure free disk is greater than the model download plus update headroom.
+3. Attach persistent storage at `/data` and configure Ollama to store models under `/data/models`. Run `bash deploy/ollama/resource_preflight.sh` inside the Ollama container before pulling weights; its default gate is 4 GB memory and 6 GB free disk, configurable with `OLLAMA_MIN_MEMORY_MB` and `OLLAMA_MIN_DISK_MB`. Ensure free disk is greater than the model download plus update headroom.
 4. Download/pull `llama3.2:3b` only after explicit cost approval. Do not download model weights during image build.
 5. Run `GET /api/tags` from the backend network and verify `llama3.2:3b` is listed before enabling research.
 
