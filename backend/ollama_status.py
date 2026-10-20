@@ -30,29 +30,10 @@ def inspect_ollama(base_url: str | None = None, model: str | None = None, timeou
             raise ValueError("invalid URL")
         if parts.username or parts.password or parts.query or parts.fragment:
             raise ValueError("URL must not contain credentials, query or fragment")
-        # Keep an optional base path, but never duplicate a trailing slash.
         base_path = parts.path.rstrip("/")
         endpoint = urlunsplit((parts.scheme, parts.netloc, base_path + "/api/tags", "", ""))
         request = Request(endpoint, headers={"Accept": "application/json"}, method="GET")
-        with urlopen(request, timeout=max(0.1, min(float(timeout), 10.0))) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        models = payload.get("models", []) if isinstance(payload, dict) else []
-        names = {
-            str(item.get("name") or item.get("model") or "")
-            for item in models
-            if isinstance(item, dict)
-        }
-        available = expected_model in names
-        return {
-            "configured": True,
-            "reachable": True,
-            "model": expected_model,
-            "model_available": available,
-            "status": "READY" if available else "MODEL_MISSING",
-            "message": "Ollama responded and the configured model is available."
-            if available
-            else "Ollama responded, but the configured model is not installed.",
-        }
+        timeout_value = max(0.1, min(float(timeout), 10.0))
     except (ValueError, TypeError):
         return {
             "configured": True,
@@ -62,12 +43,34 @@ def inspect_ollama(base_url: str | None = None, model: str | None = None, timeou
             "status": "INVALID_CONFIGURATION",
             "message": "OLLAMA_BASE_URL must be an HTTP(S) base URL without credentials, query or fragment.",
         }
-    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+
+    try:
+        with urlopen(request, timeout=timeout_value) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        models = payload.get("models", []) if isinstance(payload, dict) else []
+        names = {
+            str(item.get("name") or item.get("model") or "")
+            for item in models
+            if isinstance(item, dict)
+        }
+    except (HTTPError, URLError, TimeoutError, OSError, ValueError, TypeError):
         return {
             "configured": True,
             "reachable": False,
             "model": expected_model,
             "model_available": False,
             "status": "UNREACHABLE",
-            "message": "Ollama could not be reached. Check service availability, network access and timeout.",
+            "message": "Ollama could not be reached or returned an invalid response. Check service availability, network access and timeout.",
         }
+
+    available = expected_model in names
+    return {
+        "configured": True,
+        "reachable": True,
+        "model": expected_model,
+        "model_available": available,
+        "status": "READY" if available else "MODEL_MISSING",
+        "message": "Ollama responded and the configured model is available."
+        if available
+        else "Ollama responded, but the configured model is not installed.",
+    }
