@@ -1,0 +1,88 @@
+name: Upstream AI-TRADING npm security validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "upstream/AI-TRADING/package.json"
+      - "upstream/AI-TRADING/package-lock.json"
+      - ".github/workflows/upstream-ai-trading-npm-security.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'fix/upstream-ai-trading-npm-security-1639966805')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: upstream/AI-TRADING
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: upstream/AI-TRADING/package-lock.json
+      - name: Regenerate lockfile from manifest
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Clean reproducible install
+        run: npm ci --no-audit --no-fund
+      - name: Verify patched dependency versions
+        run: |
+          node --input-type=commonjs <<'NODE'
+          const lock = require('./package-lock.json');
+          const packages = lock.packages || {};
+          const targets = [
+            ['@grpc/grpc-js', '1.14.5'],
+            ['postcss-selector-parser', '7.1.6']
+          ];
+          function below(version, minimum) {
+            const a = version.split('.').map(Number);
+            const b = minimum.split('.').map(Number);
+            for (let i = 0; i < 3; i++) {
+              if ((a[i] || 0) < (b[i] || 0)) return true;
+              if ((a[i] || 0) > (b[i] || 0)) return false;
+            }
+            return false;
+          }
+          for (const [name, minimum] of targets) {
+            const versions = Object.entries(packages)
+              .filter(([path, entry]) => path.endsWith('/node_modules/' + name) && entry.version)
+              .map(([, entry]) => entry.version);
+            if (!versions.length || versions.some(version => below(version, minimum))) {
+              console.error('Unsafe or missing ' + name + ' version(s):', versions, 'minimum:', minimum);
+              process.exitCode = 1;
+            } else {
+              console.log('Verified ' + name + ':', versions);
+            }
+          }
+          const braces = Object.entries(packages)
+            .filter(([path, entry]) => path.endsWith('/node_modules/braces') && entry.version)
+            .map(([, entry]) => entry.version);
+          console.log('braces versions present:', braces);
+          console.log('GHSA-vfj7-8cjw-p6xm currently has no patched braces release; it is recorded as an upstream-unresolved advisory, not falsely marked fixed.');
+          NODE
+      - name: TypeScript lint
+        run: npm run lint
+      - name: Production frontend build
+        run: npm run build
+      - name: Commit regenerated lockfile after validation
+        env:
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          if git -C ../.. diff --quiet -- upstream/AI-TRADING/package-lock.json; then
+            echo "Lockfile already matches package.json."
+            exit 0
+          fi
+          git -C ../.. config user.name "github-actions[bot]"
+          git -C ../.. config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C ../.. add upstream/AI-TRADING/package-lock.json
+          git -C ../.. commit -m "Regenerate AI-TRADING npm security lockfile"
+          git -C ../.. push origin "HEAD:$BRANCH_NAME"
