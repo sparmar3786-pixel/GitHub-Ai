@@ -27,6 +27,8 @@ jobs:
         run: python -m py_compile backend/app.py backend/advanced.py backend/ollama_status.py
       - name: Run Ollama preflight unit tests
         run: python -m unittest discover -s backend -p 'test_ollama_status.py' -v
+      - name: Validate Ollama resource preflight script
+        run: bash -n deploy/ollama/resource_preflight.sh
       - name: Resolve Flutter dependencies
         working-directory: mobile
         run: flutter pub get
