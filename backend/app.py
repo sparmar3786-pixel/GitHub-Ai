@@ -310,6 +310,9 @@ def analyze(req: AnalyzeRequest):
 from advanced import router as advanced_router
 app.include_router(advanced_router)
 
+from analyze_jobs import router as analyze_jobs_router
+app.include_router(analyze_jobs_router)
+
 from ollama_status import inspect_ollama
 
 
