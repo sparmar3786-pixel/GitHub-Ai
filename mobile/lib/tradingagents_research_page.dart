@@ -176,19 +176,40 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
         if (_selectedAnalysts.isEmpty) {
           throw const FormatException('Select at least one analyst before running research.');
         }
-        final result = await _post('/v1/analyze', {
+        // Submit quickly, then poll a lightweight endpoint. A single long HTTP
+        // request can be terminated by Render's proxy before model analysis ends.
+        final submitted = await _post('/v1/analyze/jobs', {
           'ticker': ticker,
           'date': _date.text.trim(),
           'analysts': ['market', 'news', 'fundamentals', 'social']
               .where(_selectedAnalysts.contains)
               .toList(),
-        });
-        if (mounted) {
-          setState(() {
-            _report = (result['report'] ?? result['summary'] ?? 'No report returned.').toString();
-            _lastAction = 'Analysis status: ${result['status'] ?? 'UNKNOWN'}';
-          });
+        }, timeout: const Duration(seconds: 30));
+        final jobId = (submitted['job_id'] ?? '').toString();
+        if (jobId.isEmpty) {
+          throw Exception('Backend did not return a research job ID. Please retry.');
         }
+        for (var attempt = 0; attempt < 180; attempt++) {
+          await Future.delayed(const Duration(seconds: 3));
+          final result = await _get('/v1/analyze/jobs/$jobId');
+          final status = (result['status'] ?? 'UNKNOWN').toString();
+          if (status == 'READY') {
+            if (mounted) {
+              setState(() {
+                _report = (result['report'] ?? result['summary'] ?? 'No report returned.').toString();
+                _lastAction = 'Analysis status: READY';
+              });
+            }
+            return;
+          }
+          if (status == 'ERROR') {
+            throw Exception((result['error'] ?? 'Analysis failed without a diagnostic.').toString());
+          }
+          if (status != 'RUNNING') {
+            throw Exception('Unexpected research job status: $status');
+          }
+        }
+        throw Exception('Research is still running after 9 minutes. Check backend logs and retry later.');
       }, 'Running multi-agent analysis');
 
   Future<void> _backtestRun() => _run(() async {
