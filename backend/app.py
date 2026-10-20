@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -12,6 +14,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="TradingAgents Mobile API", version="0.3.0")
+logger = logging.getLogger("tradingagents.upstream")
+
+
+def sanitize_diagnostic(value: str | None, limit: int = 3000) -> str:
+    """Bound upstream errors and redact common credentials before logging/returning."""
+    text = (value or "").strip()
+    text = re.sub(r"(?i)(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|authorization|bearer)(\s*[:=]\s*)[^\s,;]+", r"\1\2[REDACTED]", text)
+    text = re.sub(r"(?i)\b(sk-[A-Za-z0-9_-]{8,}|gsk_[A-Za-z0-9_-]{8,}|nvapi-[A-Za-z0-9_-]{8,}|sk-or-v1-[A-Za-z0-9_-]{8,})\b", "[REDACTED]", text)
+    return text[-limit:]
 
 # Flutter web is hosted on a separate Render origin. Configure a comma-separated
 # allowlist with TRADINGAGENTS_CORS_ORIGINS; "*" is the no-credentials default.
@@ -269,9 +280,15 @@ def analyze(req: AnalyzeRequest):
         raise HTTPException(status_code=500, detail="Could not start the configured analysis command.") from None
 
     if result.returncode != 0:
+        diagnostic = sanitize_diagnostic(result.stderr or result.stdout)
+        logger.error("Analyze CLI failed: exit_code=%s diagnostic=%s", result.returncode, diagnostic or "no stderr/stdout")
         raise HTTPException(
             status_code=502,
-            detail="Upstream analysis failed. Check backend logs, provider credentials, model selection, and data-source access.",
+            detail={
+                "message": "Upstream analysis failed. Inspect the redacted diagnostic for provider/model/data-source details.",
+                "exit_code": result.returncode,
+                "diagnostic": diagnostic or "CLI returned no error details; check provider/model configuration and data-source access.",
+            },
         )
     output = (result.stdout or "").strip()
     if not output:
