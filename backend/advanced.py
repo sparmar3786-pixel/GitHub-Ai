@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 import re
 import shlex
 import shutil
@@ -16,6 +18,15 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/v1", tags=["TradingAgents advanced"])
+logger = logging.getLogger("tradingagents.upstream")
+
+
+def sanitize_diagnostic(value: str | None, limit: int = 3000) -> str:
+    """Bound upstream errors and redact common credentials before logging/returning."""
+    text = (value or "").strip()
+    text = re.sub(r"(?i)(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|authorization|bearer)(\s*[:=]\s*)[^\s,;]+", r"\1\2[REDACTED]", text)
+    text = re.sub(r"(?i)\b(sk-[A-Za-z0-9_-]{8,}|gsk_[A-Za-z0-9_-]{8,}|nvapi-[A-Za-z0-9_-]{8,}|sk-or-v1-[A-Za-z0-9_-]{8,})\b", "[REDACTED]", text)
+    return text[-limit:]
 DATA_DIR = Path(os.getenv("TRADINGAGENTS_DATA_DIR", "/data"))
 RESULTS_DIR = Path(os.getenv("TRADINGAGENTS_RESULTS_DIR", str(DATA_DIR / "results")))
 PORTFOLIO_FILE = DATA_DIR / "portfolio.json"
@@ -273,8 +284,14 @@ def advanced_run(req: ResearchRun):
         raise HTTPException(status_code=500, detail="Could not start TradingAgents CLI.") from None
     output = (result.stdout or "").strip()
     if result.returncode:
-        detail = (result.stderr or output or "TradingAgents analysis failed.")[-4000:]
-        raise HTTPException(status_code=502, detail=detail)
+        detail = sanitize_diagnostic(result.stderr or output)
+        logger.error("Advanced research CLI failed: exit_code=%s ticker=%s analysts=%s diagnostic=%s",
+                     result.returncode, req.ticker.upper(), ",".join(req.analysts), detail or "no stderr/stdout")
+        raise HTTPException(status_code=502, detail={
+            "message": "TradingAgents research failed; inspect the redacted diagnostic.",
+            "exit_code": result.returncode,
+            "diagnostic": detail or "CLI returned no error details; check provider/model configuration and data-source access.",
+        })
     if not output:
         raise HTTPException(status_code=502, detail="TradingAgents returned no report output.")
     return {"status": "READY", "ticker": req.ticker.upper(), "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -315,7 +332,13 @@ def backtest_grid(req: GridRun):
         raise HTTPException(status_code=500, detail="Could not start backtest CLI.") from None
     output = (result.stdout or "").strip()
     if result.returncode:
-        raise HTTPException(status_code=502, detail=(result.stderr or output or "Backtest grid failed.")[-4000:])
+        detail = sanitize_diagnostic(result.stderr or output)
+        logger.error("Backtest grid CLI failed: exit_code=%s diagnostic=%s", result.returncode, detail or "no stderr/stdout")
+        raise HTTPException(status_code=502, detail={
+            "message": "Backtest grid failed; inspect the redacted diagnostic.",
+            "exit_code": result.returncode,
+            "diagnostic": detail or "CLI returned no error details.",
+        })
     if not output:
         raise HTTPException(status_code=502, detail="Backtest grid returned empty output.")
     return {"status": "READY", "tickers": tickers, "start_date": start.isoformat(), "end_date": end.isoformat(),
