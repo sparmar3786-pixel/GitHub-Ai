@@ -309,3 +309,12 @@ def analyze(req: AnalyzeRequest):
 # Additional research workflows are isolated in a router so the original API remains compatible.
 from advanced import router as advanced_router
 app.include_router(advanced_router)
+
+from ollama_status import inspect_ollama
+
+
+@app.get("/v1/ollama/status")
+def ollama_status():
+    """Read-only preflight: checks Ollama reachability and expected model presence."""
+    return inspect_ollama()
+
