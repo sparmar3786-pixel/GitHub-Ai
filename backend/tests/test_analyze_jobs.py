@@ -7,8 +7,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi import HTTPException
 
-import analyze_jobs
+# Import the application first; it registers the job router after defining its helpers.
 from app import AnalyzeRequest
+import analyze_jobs
 
 
 class AnalyzeJobEndpointTests(unittest.TestCase):
