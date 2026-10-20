@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -106,9 +107,19 @@ class _TradingAgentsResearchPageState extends State<TradingAgentsResearchPage> {
   }
 
   Future<Map<String, dynamic>> _get(String path) async {
-    final response = await http.get(_endpoint(path), headers: {'accept': 'application/json'})
-        .timeout(const Duration(seconds: 15));
-    return _decode(response);
+    // Hosted backends (especially free Render services) may need time to wake.
+    // Give health/provider GETs a longer window than the old 15-second limit.
+    try {
+      final response = await http.get(
+        _endpoint(path),
+        headers: {'accept': 'application/json'},
+      ).timeout(const Duration(seconds: 45));
+      return _decode(response);
+    } on TimeoutException {
+      throw Exception(
+        'Backend did not respond within 45 seconds. The hosted service may be waking up or unavailable. Check the public HTTPS backend URL and its /health endpoint, then retry.',
+      );
+    }
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body,
