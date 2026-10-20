@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git build-essen
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir "git+https://github.com/TauricResearch/TradingAgents.git"
-COPY app.py advanced.py ollama_status.py .
+COPY app.py advanced.py ollama_status.py analyze_jobs.py .
 ENV TRADINGAGENTS_COMMAND=tradingagents
 ENV TRADINGAGENTS_ANALYZE_TEMPLATE="tradingagents --ticker {ticker} --date {date} --analysts market,social,news,fundamentals --save --no-show"
 ENV TRADINGAGENTS_OUTPUT_LANGUAGE=English
